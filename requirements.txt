@@ -1,0 +1,6 @@
+boto3
+awscli
+pandas
+numpy
+requests
+pandas_ta
