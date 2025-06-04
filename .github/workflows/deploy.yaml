@@ -2,25 +2,33 @@ name: Deploy to EC2
 
 on:
   push:
-    branches:
-      - main  # Change to 'master' if that’s your default branch
+    branches: [main]
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
+    - name: Checkout repo
       uses: actions/checkout@v3
 
-    - name: Connect to EC2 and Deploy
+    - name: SSH & Deploy to EC2
       run: |
         mkdir -p ~/.ssh
         echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_ed25519
         chmod 600 ~/.ssh/id_ed25519
 
         ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
-          cd ~/myproject  # Replace with your EC2 project directory
+          cd ~/upstox_bot
+
+          echo "✅ Pulling latest code"
           git pull origin main
-          # Optional: restart services, install dependencies, etc.
+
+          echo "✅ Activating virtual environment"
+          source upstox_env/bin/activate
+
+          echo "✅ Installing dependencies"
+          pip install -r requirements.txt
+
+          echo "✅ Deployment successful"
         EOF
