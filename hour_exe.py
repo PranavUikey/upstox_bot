@@ -4,99 +4,83 @@ from expiry_fetcher import FetchExpiryDates
 from order_exe import Order
 import numpy as np
 from position_fetcher import PositionFetcher
-from config import AWSConfig
-import pandas as pd
 import pytz
 from datetime import datetime
 
+class HourlyExecution:
+    def __init__(self):
+        self.end_off_data = []
+        self.all_trade_execution = []
+        self.call_trade = 0
+        self.put_trade = 0
 
-end_off_data = []
-all_trade_execution  = []
+        ohlc_data = FetchOHLC()
+        self.last_line = ohlc_data.all_days_ohlc().tail(1)
+        print(f"Last OHLC Data: {self.last_line}")
 
-ohlc_data = FetchOHLC()
-last_line = ohlc_data.all_days_ohlc().tail(1)
+        expiryDate = FetchExpiryDates()
+        self.expiry = expiryDate.expiry_date()[1]
 
-print(f"Last OHLC Data: {last_line}")
+        BullCallBear = BullCallBearSpread()
+        self.call_option = BullCallBear.option_chain('call')
+        self.put_option = BullCallBear.option_chain('put')
 
-expiryDate = FetchExpiryDates()
-expiry = expiryDate.expiry_date()[1]
+    def run(self):
+        now = datetime.now(pytz.timezone('Asia/Kolkata')).strftime("%Y-%m-%d %H:%M:%S")
+        ll = self.last_line
 
-BullCallBear = BullCallBearSpread()
-call_option = BullCallBear.option_chain('call')   
-put_option = BullCallBear.option_chain('put')
+        cond_call = (ll['close'].values[0] < ll['EMA_20'].values[0] and
+                     ll['supertrend'].values[0] == -1 and
+                     ll['close'].values[0] < ll['open'].values[0])
+        cond_put = (ll['close'].values[0] > ll['EMA_20'].values[0] and
+                    ll['supertrend'].values[0] == 1 and
+                    ll['close'].values[0] > ll['open'].values[0])
 
-order_conf = Order()
-# order = order_conf.order_place(75 , )
+        expiry_time = self.expiry + ' 03:00:00' if isinstance(self.expiry, str) else ''
+        if self.call_trade and expiry_time >= now:
+            self._exit_trade('call', now)
+            self.call_trade = 0
+        elif self.put_trade and expiry_time >= now:
+            self._exit_trade('put', now)
+            self.put_trade = 0
 
-current_time = datetime.now(pytz.timezone('Asia/Kolkata')).strftime("%Y-%m-%d %H:%M:%S")
+        if now >= datetime.now(pytz.timezone('Asia/Kolkata')).strftime("%Y-%m-%d") + ' 15:30:00':
+            pos = PositionFetcher().get_positions()['data']
+            self.end_off_data.append(pos)
 
-condition_call = ((last_line['close'].values[0]<last_line['EMA_20'].values[0])and  
-                  (last_line['supertrend'].values[0] == -1) and 
-                  (last_line['close'].values[0]< last_line['open'].values[0]))
+        if cond_call and not self.call_trade and not self.put_trade:
+            self._enter_trade('call', now)
+            self.call_trade = 1
+        elif cond_put and not self.put_trade and not self.call_trade:
+            self._enter_trade('put', now)
+            self.put_trade = 1
+        elif self.call_trade and ll['supertrend'].values[0] == 1:
+            self._exit_trade('call', now)
+            self.call_trade = 0
+        elif self.put_trade and ll['supertrend'].values[0] == -1:
+            self._exit_trade('put', now)
+            self.put_trade = 0
 
-condition_put = ((last_line['close'].values[0]>last_line['EMA_20'].values[0])and  
-                 (last_line['supertrend'].values[0] == 1) and
-                   (last_line['close'].values[0]> last_line['open'].values[0]))
+    def _enter_trade(self, typ, now):
+        opt = self.call_option if typ == 'call' else self.put_option
+        self.order_conf = Order(75, 'BUY')
+        self.order_conf.order_place(opt[0]['instrument_key'].values[0])
 
-call_trade = 0
-put_trade = 0
-if isinstance(expiry , str): #end of expiry condition
-    if call_trade ==1 and  expiry + ' 03:00:00'>= current_time:
-        order_conf.order_place(75 ,'SELL' , call_option[0]['instrument_key'].values[0])
-        order_conf.order_place(75 ,'BUY' , call_option[1]['instrument_key'].values[0])        
-        all_trade_execution.append(np.append(call_option[0].values , [current_time , 'SELL']))
-        all_trade_execution.append(np.append(call_option[1].values , [current_time , 'BUY']))
-        call_trade=0
-    elif put_trade ==1 and  expiry + ' 03:00:00'>= current_time:
-        order_conf.order_place(75 ,'SELL' , put_option[0]['instrument_key'].values[0])
-        order_conf.order_place(75 ,'BUY' , put_option[1]['instrument_key'].values[0])
-        all_trade_execution.append(np.append(put_option[0].values , [current_time , 'SELL']))
-        all_trade_execution.append(np.append(put_option[1].values , [current_time , 'BUY']))
-        put_trade=0
-if current_time >= (datetime.now(pytz.timezone('Asia/Kolkata')).strftime("%Y-%m-%d")+' 15:30:00'): # every day pnl added
-    pos = PositionFetcher()
-    # get_positions = pos.get_positions()
-    position_end_of_day  = pos.get_positions()['data']
-    end_off_data.append(position_end_of_day)
+        self.order_conf = Order(75, 'SELL')
+        self.order_conf.order_place(opt[1]['instrument_key'].values[0])
+        self.all_trade_execution.append(np.append(opt[0].values, [now, 'BUY']))
+        self.all_trade_execution.append(np.append(opt[1].values, [now, 'SELL']))
 
-if condition_call  and call_trade == 0 and put_trade ==0: # all condition for call option
+    def _exit_trade(self, typ, now):
+        opt = self.call_option if typ == 'call' else self.put_option
+        self.order_conf = Order(75, 'SELL')
+        self.order_conf.order_place(opt[0]['instrument_key'].values[0])
 
-        order_conf.order_place(75 ,'BUY' , call_option[0]['instrument_key'].values[0])
-        order_conf.order_place(75 ,'SELL' , call_option[1]['instrument_key'].values[0])
-        
-
-        print(call_option[1]['instrument_key'].values[0], call_option[0]['instrument_key'].values[0])
-     
-
-        all_trade_execution.append(np.append(call_option[0].values , [current_time , 'BUY']))
-        all_trade_execution.append(np.append(call_option[1].values , [current_time , 'SELL']))
-        call_trade = 1
-if condition_put and put_trade == 0  and call_trade==0 :
-    order_conf.order_place(75 ,'BUY' , put_option[0]['instrument_key'].values[0])
-    order_conf.order_place(75 ,'SELL' , put_option[1]['instrument_key'].values[0])
-
-    all_trade_execution.append(np.append(put_option[0].values , [current_time , 'BUY']))
-    all_trade_execution.append(np.append(put_option[1].values , [current_time , 'SELL']))
+        self.order_conf = Order(75, 'BUY')
+        self.order_conf.order_place(opt[1]['instrument_key'].values[0])
+        self.all_trade_execution.append(np.append(opt[0].values, [now, 'SELL']))
+        self.all_trade_execution.append(np.append(opt[1].values, [now, 'BUY']))
 
 
-    put_trade= 1
-
-elif call_trade ==1 : # sl and traling sl call
-    if last_line['supertrend'].values[0] ==1:
-        order_conf.order_place(75 ,'SELL' , call_option[0]['instrument_key'].values[0])
-        order_conf.order_place(75 ,'BUY' , call_option[1]['instrument_key'].values[0])
-    # current_time = datetime.now(pytz.timezone('Asia/Kolkata')).strftime("%Y-%m-%d %H:%M:%S")
-        all_trade_execution.append(np.append(call_option[0].values ,[ current_time , 'SELL']))
-        all_trade_execution.append(np.append(call_option[1].values ,[ current_time , 'BUY']))
-
-        call_trade =0
-
-elif put_trade==1 : # sl for put tarde
-      if last_line['supertrend'].values[0] ==-1:
-        order_conf.order_place(75 ,'SELL' , put_option[0]['instrument_key'].values[0])
-        order_conf.order_place(75 ,'BUY' , put_option[1]['instrument_key'].values[0])
-
-        all_trade_execution.append(np.append(put_option[0].values , [current_time , 'SELL']))
-        all_trade_execution.append(np.append(call_option[1].values ,[ current_time , 'BUY']))
-
-        put_trade =0
+exe = HourlyExecution()
+exe.run()

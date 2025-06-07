@@ -4,18 +4,18 @@ from option_chain import BullCallBearSpread
 from config import AWSConfig  # Assuming you have a config.py with AWSConfig class
 
 class Order:
-    def __init__(self):
-        
+    def __init__(self,quantity, transaction_type,):
+        self.quantity = quantity
+        self.transaction_type = transaction_type
+        # Fetch access token from AWS SSM
         config = AWSConfig()
         self.token = config.get_parameter('/upstox/access_token')['Parameter']['Value']
 
-        
+    def order_place(self, instrument_token):
 
-    def order_place(self, quantity, transaction_type,instrument_token):
-
-        if transaction_type == 'BUY':
+        if self.transaction_type == 'BUY':
             OptionCallBuy = 'BUY'
-        elif transaction_type == 'SELL':
+        elif self.transaction_type == 'SELL':
             OptionCallBuy = 'SELL'
         else:
             raise ValueError("Invalid transaction type. Use 'BUY' or 'SELL'.")
@@ -26,9 +26,9 @@ class Order:
         headers = {'Accept': 'application/json','Api-Version': '2.0',
                    'Content-Type': 'application/json','Authorization': f'Bearer {self.token}' }
         
-        order_data = {'quantity': quantity,'product': 'D', 'validity': 'DAY','price': 0, 
+        order_data = {'quantity': self.quantity,'product': 'D', 'validity': 'DAY','price': 0, 
                       'tag': OptionCallBuy,'instrument_token': instrument_token,
-                      'order_type': 'MARKET','transaction_type': transaction_type, 'disclosed_quantity': 0, 
+                      'order_type': 'MARKET','transaction_type': self.transaction_type, 'disclosed_quantity': 0, 
                       'trigger_price': 0,'is_amo': False}
         
         response = requests.post(url, json=order_data, headers=headers)
@@ -40,8 +40,8 @@ BCBSpread = BullCallBearSpread()
 
 output = BCBSpread.option_chain('call')
 
-sell_call = output[0]
-buy_call = output[1]
+buy_call = output[0]
+sell_call = output[1]
 
 
 sell_strike = sell_call['strike_price'].values[0]
@@ -51,11 +51,11 @@ sell_instrument_token = sell_call['instrument_key'].values[0]
 buy_instrument_token = buy_call['instrument_key'].values[0]
 
 # Place sell order
-sell_order = Order()
-sell_response = sell_order.order_place(75, 'SELL', sell_instrument_token)
+sell_order = Order(75, 'SELL')
+sell_response = sell_order.order_place(sell_instrument_token)
 # Place buy order
-buy_order = Order()
-buy_response = buy_order.order_place(75, 'BUY', buy_instrument_token)
+buy_order = Order(75, 'BUY')
+buy_response = buy_order.order_place( buy_instrument_token)
 print("Sell Order Response:", sell_response)    
 print("Buy Order Response:", buy_response)
 # Print the strike prices
