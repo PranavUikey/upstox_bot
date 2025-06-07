@@ -12,7 +12,7 @@ class FetchOHLC:
         self.interval = interval
 
         current_date = date.today()
-        six_days_before = current_date - timedelta(days=14) # Changed to 14 days for more data
+        six_days_before = current_date - timedelta(days=14)
 
         self.from_date = six_days_before.strftime('%Y-%m-%d')
         self.to_date = current_date.strftime('%Y-%m-%d')
