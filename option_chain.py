@@ -9,7 +9,7 @@ class BullCallBearSpread:
     def __init__(self):
         # Fetch expiry date
         expiry_dates = FetchExpiryDates()
-        self.expiry_date = expiry_dates.expiry_date()[0]
+        self.expiry_date = expiry_dates.expiry_date()[1]  # Get the second expiry date
 
         # Fetch Nifty close price
         ohlc = FetchOHLC()
