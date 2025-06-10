@@ -88,14 +88,14 @@ class BullCallBearSpread:
         
 
 
-if __name__ == "__main__":
-    try:
-        BCBSpread = BullCallBearSpread()
-        buy , sell = BCBSpread.option_chain('call')
+# if __name__ == "__main__":
+#     try:
+#         BCBSpread = BullCallBearSpread()
+#         buy , sell = BCBSpread.option_chain('call')
 
-        print("\n[RESULT] Bull Call Spread Recommendation:")
-        print("Sell Strike Price:", sell['strike_price'].values[0])
-        print("Buy Strike Price :", buy['strike_price'].values[0])
-        # print("Net Credit        :", round(sell['ltp'].values[0] - buy['ltp'].values[0], 2))
-    except Exception as e:
-        print(f"[ERROR] {e}")
+#         print("\n[RESULT] Bull Call Spread Recommendation:")
+#         print("Sell Strike Price:", sell['strike_price'].values[0])
+#         print("Buy Strike Price :", buy['strike_price'].values[0])
+#         # print("Net Credit        :", round(sell['ltp'].values[0] - buy['ltp'].values[0], 2))
+#     except Exception as e:
+#         print(f"[ERROR] {e}")

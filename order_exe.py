@@ -36,28 +36,28 @@ class Order:
         return 'Response:', response.json()
     
 
-BCBSpread = BullCallBearSpread()
+# BCBSpread = BullCallBearSpread()
 
-output = BCBSpread.option_chain('call')
+# output = BCBSpread.option_chain('call')
 
-buy_call = output[0]
-sell_call = output[1]
+# buy_call = output[0]
+# sell_call = output[1]
 
 
-sell_strike = sell_call['strike_price'].values[0]
-buy_strike = buy_call['strike_price'].values[0]
+# sell_strike = sell_call['strike_price'].values[0]
+# buy_strike = buy_call['strike_price'].values[0]
 
-sell_instrument_token = sell_call['instrument_key'].values[0]
-buy_instrument_token = buy_call['instrument_key'].values[0]
+# sell_instrument_token = sell_call['instrument_key'].values[0]
+# buy_instrument_token = buy_call['instrument_key'].values[0]
 
-# Place sell order
-sell_order = Order(75, 'SELL')
-sell_response = sell_order.order_place(sell_instrument_token)
-# Place buy order
-buy_order = Order(75, 'BUY')
-buy_response = buy_order.order_place( buy_instrument_token)
-print("Sell Order Response:", sell_response)    
-print("Buy Order Response:", buy_response)
-# Print the strike prices
-print("Sell Strike:", sell_strike)  
-print("Buy Strike:", buy_strike)
+# # Place sell order
+# sell_order = Order(75, 'SELL')
+# sell_response = sell_order.order_place(sell_instrument_token)
+# # Place buy order
+# buy_order = Order(75, 'BUY')
+# buy_response = buy_order.order_place( buy_instrument_token)
+# print("Sell Order Response:", sell_response)    
+# print("Buy Order Response:", buy_response)
+# # Print the strike prices
+# print("Sell Strike:", sell_strike)  
+# print("Buy Strike:", buy_strike)
