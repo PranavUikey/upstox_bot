@@ -32,14 +32,14 @@ class FetchExpiryDates:
         else:
             return f"Error: {response.status_code} - {response.text}"
 
-# Run the script
-if __name__ == "__main__":
-    fetcher = FetchExpiryDates()
-    dates = fetcher.expiry_date()
+# # Run the script
+# if __name__ == "__main__":
+#     fetcher = FetchExpiryDates()
+#     dates = fetcher.expiry_date()
 
-    print("Unique Expiry Dates for Nifty 50 Contracts:")
-    if isinstance(dates, list):
-        for date in dates:
-            print(date)
-    else:
-        print(dates)
+#     print("Unique Expiry Dates for Nifty 50 Contracts:")
+#     if isinstance(dates, list):
+#         for date in dates:
+#             print(date)
+#     else:
+#         print(dates)

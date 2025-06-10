@@ -82,5 +82,6 @@ class HourlyExecution:
         self.all_trade_execution.append(np.append(opt[1].values, [now, 'BUY']))
 
 
-exe = HourlyExecution()
-exe.run()
+if __name__ == "__main__":
+    exe = HourlyExecution()
+    exe.run()

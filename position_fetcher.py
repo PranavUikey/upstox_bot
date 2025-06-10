@@ -21,6 +21,7 @@ class PositionFetcher:
         else:
             print("Error fetching positions:", response.text)
             return None
-pos_fet = PositionFetcher()
-position = pos_fet.get_positions()
-print(position)
+
+# pos_fet = PositionFetcher()
+# position = pos_fet.get_positions()
+# print(position)
