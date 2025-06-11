@@ -37,12 +37,26 @@ class TradeState:
             logger.info(f"State file '{self.key}' exists in bucket '{self.bucket}'.")
         except self.s3.exceptions.NoSuchKey:
             logger.warning("State file not found (NoSuchKey). Creating a new one.")
-            self.save_state({"call_trade": 0, "put_trade": 0, "last_reset_date": self._today()})
+            expiry_fetcher = FetchExpiryDates()
+            expiry_list = expiry_fetcher.expiry_date()
+            expiry_date = expiry_list[1] if len(expiry_list) > 1 else expiry_list[0]
+            self.save_state({
+                "call_trade": 0,
+                "put_trade": 0,
+                "expiry_date": expiry_date
+            })
         except self.s3.exceptions.ClientError as e:
             error_code = e.response['Error'].get('Code')
             if error_code == '404':
                 logger.warning("State file not found (404). Creating a new one.")
-                self.save_state({"call_trade": 0, "put_trade": 0, "last_reset_date": self._today()})
+                expiry_fetcher = FetchExpiryDates()
+                expiry_list = expiry_fetcher.expiry_date()
+                expiry_date = expiry_list[1] if len(expiry_list) > 1 else expiry_list[0]
+                self.save_state({
+                    "call_trade": 0,
+                    "put_trade": 0,
+                    "expiry_date": expiry_date
+            })
             else:
                 logger.error("Unhandled error checking S3 file: %s", str(e))
                 raise
@@ -70,22 +84,6 @@ class TradeState:
 
     def get_state(self):
         state = self.load_state()
-        today = self._today()
-        if state.get("last_reset_date") != today:
-            logger.info("Resetting state for new day.")
-            
-            # You can customize this to fetch the expiry using your expiry fetcher
-            expiry_fetcher = FetchExpiryDates()
-            expiry_list = expiry_fetcher.expiry_date()
-            expiry_date = expiry_list[1] if len(expiry_list) > 1 else expiry_list[0]
-
-            state = {
-                "call_trade": 0,
-                "put_trade": 0,
-                "last_reset_date": today,
-                "expiry_date": expiry_date
-            }
-            self.save_state(state)
         return state
 
 
@@ -95,7 +93,6 @@ class TradeState:
         state.update({
             "call_trade": call_trade,
             "put_trade": put_trade,
-            "last_reset_date": self._today()
         })
         self.save_state(state)
 
