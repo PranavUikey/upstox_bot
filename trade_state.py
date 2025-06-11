@@ -29,7 +29,7 @@ class TradeState:
         self._ensure_file()
 
     def _today(self):
-        return datetime.now(pytz.timezone("Asia/Kolkata")).strftime("%Y-%m-%d %H:%M:%S")
+        return datetime.now(pytz.timezone("Asia/Kolkata")).strftime("%Y-%m-%d")
 
     def _ensure_file(self):
         try:
