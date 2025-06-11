@@ -63,12 +63,12 @@ class HourlyExecution:
 
         expiry_time = self.expiry + ' 03:00:00' if isinstance(self.expiry, str) else ''
         
-        if self.call_trade ==1 and expiry_time >= now:
+        if self.call_trade ==1 and expiry_time <= now:
             logger.info("Exiting CALL trade due to expiry condition.")
             self._exit_trade('call', now)
             self.call_trade = 0
 
-        if self.put_trade ==1 and expiry_time >= now:
+        if self.put_trade ==1 and expiry_time <= now:
             logger.info("Exiting PUT trade due to expiry condition.")
             self._exit_trade('put', now)
             self.put_trade = 0
