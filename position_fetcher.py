@@ -15,7 +15,7 @@ class PositionFetcher:
         }
         response = requests.get( url, headers=headers)
         print(response.status_code)
-        # print(response.text)
+        print(response.text)
         if response.status_code == 200:
             return response.json()
         else:
