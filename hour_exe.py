@@ -49,6 +49,37 @@ class HourlyExecution:
         BullCallBear = BullCallBearSpread()
         self.call_option = BullCallBear.option_chain('call')
         self.put_option = BullCallBear.option_chain('put')
+
+
+
+
+    def _append_to_s3_csv(self, data, columns, s3_key = "all_trade_execution.csv"):
+        s3 = boto3.client('s3')
+        bucket = "upstox-trade-state-287191041687"
+        # Try to read existing CSV from S3
+        try:
+            obj = s3.get_object(Bucket=bucket, Key=s3_key)
+            existing_df = pd.read_csv(io.BytesIO(obj['Body'].read()))
+        except s3.exceptions.NoSuchKey:
+            existing_df = pd.DataFrame(columns=columns)
+
+        # Append new data
+        new_df = pd.DataFrame([data], columns=columns)
+        result_df = pd.concat([existing_df, new_df], ignore_index=True)
+
+        # Write back to S3
+        csv_buffer = io.StringIO()
+        result_df.to_csv(csv_buffer, index=False)
+        s3.put_object(Bucket=bucket, Key=s3_key, Body=csv_buffer.getvalue())
+
+    def record_trade_execution(self, trade_data):
+        columns = ["expiry_date", "strike_price", "delta", "ltp", "instrument_token"]  # <-- Set your actual columns
+        self._append_to_s3_csv(trade_data, columns, "all_trade_execution.csv")
+
+    def record_end_of_day(self, eod_data,date):
+        # columns = ["col1", "col2", "col3", "datetime"]  # <-- Set your actual columns
+        # self._append_to_s3_csv(eod_data, columns, "end_of_day.csv")
+        self._append_to_s3_csv(eod_data, f"end_of_day_{date}.csv")
     
 
     def run(self):
@@ -99,9 +130,10 @@ class HourlyExecution:
 
         if now >= datetime.strptime(datetime.now(pytz.timezone('Asia/Kolkata')).strftime("%Y-%m-%d") + ' 15:30:00', "%Y-%m-%d %H:%M:%S"):
             logger.info("Recording end-of-day positions.")
-            pos = PositionFetcher().get_positions()['data']
-            self.end_off_data.append(pos)
-            print('End of Day Position Data:----> ', self.end_off_data)
+            pos = PositionFetcher().get_positions()['data'][0]
+            # self.end_off_data.append(pos)
+            self.record_end_of_day(pos,now.strftime("%Y-%m-%d %H:%M:%S"))
+            # print('End of Day Position Data:----> ', self.end_off_data)
 
         
 
@@ -120,10 +152,12 @@ class HourlyExecution:
         self.order_conf.order_place(opt[1]['instrument_key'].values[0])
         logger.info(f"SELL order placed for: {opt[1]['instrument_key'].values[0]}")
 
-        self.all_trade_execution.append(np.append(opt[0].values, [now, 'BUY']))
+        # self.all_trade_execution.append(np.append(opt[0].values, [now, 'BUY']))
+        self.record_trade_execution(np.append(opt[0].values, [now, 'BUY']))
         
 
-        self.all_trade_execution.append(np.append(opt[1].values, [now, 'SELL']))
+        # self.all_trade_execution.append(np.append(opt[1].values, [now, 'SELL']))
+        self.record_trade_execution(np.append(opt[1].values, [now, 'SELL']))
         
 
         # ✅ Send Email Notification
@@ -152,8 +186,10 @@ class HourlyExecution:
         self.order_conf.order_place(opt[1]['instrument_key'].values[0])
         logger.info(f"BUY order placed for: {opt[1]['instrument_key'].values[0]}")
 
-        self.all_trade_execution.append(np.append(opt[0].values, [now, 'SELL']))
-        self.all_trade_execution.append(np.append(opt[1].values, [now, 'BUY']))
+        # self.all_trade_execution.append(np.append(opt[0].values, [now, 'SELL']))
+        self.record_trade_execution(np.append(opt[0].values, [now, 'SELL']))
+        # self.all_trade_execution.append(np.append(opt[1].values, [now, 'BUY']))
+        self.record_trade_execution(np.append(opt[1].values, [now, 'BUY']))
 
         # ✅ Send Email Notification
         subject = f"{typ.upper()} Trade Exit Executed"
@@ -173,5 +209,5 @@ class HourlyExecution:
 if __name__ == "__main__":
     exe = HourlyExecution()
     exe.run()
-    print('end_off_data',exe.end_off_data)
-    print('All_trade_BUY_execution_list:----> ',exe.all_trade_execution)
+    # print('end_off_data',exe.end_off_data)
+    # print('All_trade_BUY_execution_list:----> ',exe.all_trade_execution)
