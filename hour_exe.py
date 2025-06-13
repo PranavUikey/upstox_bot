@@ -170,8 +170,8 @@ class HourlyExecution:
         self.state_mgr.send_trade_email(
             subject=subject,
             message_body=body,
-            to_email="snehadeep.sb@gmail.com",     # ⚠️ Change to your verified recipient
-            from_email="pranavuiih@gmail.com"       # ⚠️ Must be verified in SES
+            to_email="snehadeep.sb@gmail.com",    
+            from_email="pranavuiih@gmail.com"      
         )
 
     def _exit_trade(self, typ, now):
