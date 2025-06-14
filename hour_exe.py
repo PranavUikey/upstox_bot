@@ -21,16 +21,12 @@ logging.basicConfig(
         logging.StreamHandler()
     ]
 )
-
 logger = logging.getLogger(__name__)
 
 
 class HourlyExecution:
     def __init__(self):
         logger.info("Initializing HourlyExecution...")
-
-        self.end_off_data = []
-        self.all_trade_execution = []
 
         self.state_mgr = TradeState()
         state = self.state_mgr.get_state()
@@ -50,41 +46,31 @@ class HourlyExecution:
         self.call_option = BullCallBear.option_chain('call')
         self.put_option = BullCallBear.option_chain('put')
 
-
-
-
-    def _append_to_s3_csv(self, data, columns, s3_key = "all_trade_execution.csv"):
+    def _append_to_s3_csv(self, data, columns, s3_key="all_trade_execution.csv"):
         s3 = boto3.client('s3')
         bucket = "upstox-trade-state-287191041687"
-        # Try to read existing CSV from S3
         try:
             obj = s3.get_object(Bucket=bucket, Key=s3_key)
             existing_df = pd.read_csv(io.BytesIO(obj['Body'].read()))
         except s3.exceptions.NoSuchKey:
             existing_df = pd.DataFrame(columns=columns)
 
-        # Append new data
         new_df = pd.DataFrame([data], columns=columns)
         result_df = pd.concat([existing_df, new_df], ignore_index=True)
 
-        # Write back to S3
         csv_buffer = io.StringIO()
         result_df.to_csv(csv_buffer, index=False)
         s3.put_object(Bucket=bucket, Key=s3_key, Body=csv_buffer.getvalue())
 
     def record_trade_execution(self, trade_data):
-        columns = ["expiry_date", "strike_price", "delta", "ltp", "instrument_token"]  # <-- Set your actual columns
+        columns = ["expiry_date", "strike_price", "delta", "ltp", "instrument_token", "timestamp", "action"]
         self._append_to_s3_csv(trade_data, columns, "all_trade_execution.csv")
 
-    def record_end_of_day(self, eod_data,date):
-        # columns = ["col1", "col2", "col3", "datetime"]  # <-- Set your actual columns
-        # self._append_to_s3_csv(eod_data, columns, "end_of_day.csv")
-        self._append_to_s3_csv(eod_data, f"end_of_day_{date}.csv")
-    
+    def record_end_of_day(self, eod_data, date):
+        self._append_to_s3_csv(eod_data, list(eod_data.keys()), f"end_of_day_{date}.csv")
 
     def run(self):
-        now = datetime.strptime(str(datetime.now(pytz.timezone('Asia/Kolkata')).strftime("%Y-%m-%d %H:%M:%S")),"%Y-%m-%d %H:%M:%S")
-        print(now)
+        now = datetime.now(pytz.timezone('Asia/Kolkata'))
         ll = self.last_line
 
         logger.info(f"Running trade execution at {now}")
@@ -99,43 +85,33 @@ class HourlyExecution:
 
         expiry_time = datetime.strptime(self.expiry + ' 03:00:00', "%Y-%m-%d %H:%M:%S") if isinstance(self.expiry, str) else None
 
+        # First handle exits
+        if self.call_trade == 1 and (ll['supertrend'].values[0] == 1 or (expiry_time and expiry_time <= now)):
+            logger.info("Exiting CALL trade.")
+            self._exit_trade('call', now)
+            self.call_trade = 0
 
-        if cond_call and self.call_trade==0 and  self.put_trade == 0:
-            logger.info("Entering CALL trade based on strategy.")
+        if self.put_trade == 1 and (ll['supertrend'].values[0] == -1 or (expiry_time and expiry_time <= now)):
+            logger.info("Exiting PUT trade.")
+            self._exit_trade('put', now)
+            self.put_trade = 0
+
+        # Then check for fresh entries
+        if cond_call and self.call_trade == 0 and self.put_trade == 0:
+            logger.info("Entering CALL trade.")
             self._enter_trade('call', now)
             self.call_trade = 1
-        elif cond_put and  self.put_trade ==0 and self.call_trade == 0:
-            logger.info("Entering PUT trade based on strategy.")
+
+        elif cond_put and self.call_trade == 0 and self.put_trade == 0:
+            logger.info("Entering PUT trade.")
             self._enter_trade('put', now)
             self.put_trade = 1
 
-        elif self.call_trade == 1 and ll['supertrend'].values[0] == 1:
-            logger.info("Exiting CALL trade due to stop loss condition.")
-            self._exit_trade('call', now)
-            self.call_trade = 0
-        elif self.put_trade == 1 and ll['supertrend'].values[0] == -1:
-            logger.info("Exiting PUT trade due to stop loss condition.")
-            self._exit_trade('put', now)
-            self.put_trade = 0
-        
-        elif self.call_trade ==1 and expiry_time and expiry_time <= now:
-            logger.info("Exiting CALL trade due to expiry condition.")
-            self._exit_trade('call', now)
-            self.call_trade = 0
-
-        elif self.put_trade ==1 and expiry_time and expiry_time <= now:
-            logger.info("Exiting PUT trade due to expiry condition.")
-            self._exit_trade('put', now)
-            self.put_trade = 0
-
-        if now >= datetime.strptime(datetime.now(pytz.timezone('Asia/Kolkata')).strftime("%Y-%m-%d") + ' 15:30:00', "%Y-%m-%d %H:%M:%S"):
+        # End of day capture
+        if now >= datetime.strptime(now.strftime("%Y-%m-%d") + ' 15:30:00', "%Y-%m-%d %H:%M:%S"):
             logger.info("Recording end-of-day positions.")
             pos = PositionFetcher().get_positions()['data'][0]
-            # self.end_off_data.append(pos)
-            self.record_end_of_day(pos,now.strftime("%Y-%m-%d %H:%M:%S"))
-            # print('End of Day Position Data:----> ', self.end_off_data)
-
-        
+            self.record_end_of_day(pos, now.strftime("%Y-%m-%d_%H-%M-%S"))
 
         self.state_mgr.update_trade_flags(self.call_trade, self.put_trade)
         logger.info("Updated trade flags and saved state.")
@@ -147,32 +123,20 @@ class HourlyExecution:
         self.order_conf = Order(75, 'BUY')
         self.order_conf.order_place(opt[0]['instrument_key'].values[0])
         logger.info(f"BUY order placed for: {opt[0]['instrument_key'].values[0]}")
+        self.record_trade_execution(np.append(opt[0].values, [now, 'BUY']))
 
         self.order_conf = Order(75, 'SELL')
         self.order_conf.order_place(opt[1]['instrument_key'].values[0])
         logger.info(f"SELL order placed for: {opt[1]['instrument_key'].values[0]}")
-
-        # self.all_trade_execution.append(np.append(opt[0].values, [now, 'BUY']))
-        self.record_trade_execution(np.append(opt[0].values, [now, 'BUY']))
-        
-
-        # self.all_trade_execution.append(np.append(opt[1].values, [now, 'SELL']))
         self.record_trade_execution(np.append(opt[1].values, [now, 'SELL']))
-        
 
-        # ✅ Send Email Notification
         subject = f"{typ.upper()} Trade Entry Executed"
         body = (
             f"A {typ.upper()} trade has been entered at {now}.\n"
             f"BUY: {opt[0]['instrument_key'].values[0]}\n"
             f"SELL: {opt[1]['instrument_key'].values[0]}"
         )
-        self.state_mgr.send_trade_email(
-            subject=subject,
-            message_body=body,
-            to_email="snehadeep.sb@gmail.com",    
-            from_email="pranavuiih@gmail.com"      
-        )
+        self.state_mgr.send_trade_email(subject, body, "snehadeep.sb@gmail.com", "pranavuiih@gmail.com")
 
     def _exit_trade(self, typ, now):
         logger.info(f"Placing {typ.upper()} exit orders at {now}")
@@ -181,33 +145,22 @@ class HourlyExecution:
         self.order_conf = Order(75, 'SELL')
         self.order_conf.order_place(opt[0]['instrument_key'].values[0])
         logger.info(f"SELL order placed for: {opt[0]['instrument_key'].values[0]}")
+        self.record_trade_execution(np.append(opt[0].values, [now, 'SELL']))
 
         self.order_conf = Order(75, 'BUY')
         self.order_conf.order_place(opt[1]['instrument_key'].values[0])
         logger.info(f"BUY order placed for: {opt[1]['instrument_key'].values[0]}")
-
-        # self.all_trade_execution.append(np.append(opt[0].values, [now, 'SELL']))
-        self.record_trade_execution(np.append(opt[0].values, [now, 'SELL']))
-        # self.all_trade_execution.append(np.append(opt[1].values, [now, 'BUY']))
         self.record_trade_execution(np.append(opt[1].values, [now, 'BUY']))
 
-        # ✅ Send Email Notification
         subject = f"{typ.upper()} Trade Exit Executed"
         body = (
             f"A {typ.upper()} trade has been exited at {now}.\n"
             f"SELL: {opt[0]['instrument_key'].values[0]}\n"
             f"BUY: {opt[1]['instrument_key'].values[0]}"
         )
-        self.state_mgr.send_trade_email(
-            subject=subject,
-            message_body=body,
-            to_email="snehadeep.sb@gmail.com",     
-            from_email="pranavuiih@gmail.com"
-        )
+        self.state_mgr.send_trade_email(subject, body, "snehadeep.sb@gmail.com", "pranavuiih@gmail.com")
 
 
 if __name__ == "__main__":
     exe = HourlyExecution()
     exe.run()
-    # print('end_off_data',exe.end_off_data)
-    # print('All_trade_BUY_execution_list:----> ',exe.all_trade_execution)
