@@ -67,7 +67,7 @@ class HourlyExecution:
         self._append_to_s3_csv(trade_data, columns, "all_trade_execution.csv")
 
     def record_end_of_day(self, eod_data, date):
-        self._append_to_s3_csv(eod_data, list(eod_data.keys()), f"end_of_day_{date}.csv")
+        self._append_to_s3_csv(eod_data, list(range(0,len(eod_data))), f"end_of_day_{date}.csv")
 
     def run(self):
         now = datetime.now(pytz.timezone('Asia/Kolkata'))
@@ -82,16 +82,22 @@ class HourlyExecution:
         cond_put = (ll['close'].values[0] > ll['EMA_20'].values[0] and
                     ll['supertrend'].values[0] == 1 and
                     ll['close'].values[0] > ll['open'].values[0])
+        
+        tz = pytz.timezone("Asia/Kolkata")
 
-        expiry_time = datetime.strptime(self.expiry + ' 03:00:00', "%Y-%m-%d %H:%M:%S") if isinstance(self.expiry, str) else None
+        expiry_time = (
+                        tz.localize(datetime.strptime(self.expiry + ' 15:00:00', "%Y-%m-%d %H:%M:%S"))
+                        if isinstance(self.expiry, str)
+                        else None
+                    )
 
         # First handle exits
-        if self.call_trade == 1 and (ll['supertrend'].values[0] == 1 or (expiry_time and expiry_time <= now)):
+        if self.call_trade == 1 and (ll['supertrend'].values[0] == 1 and (expiry_time and expiry_time <= now)):
             logger.info("Exiting CALL trade.")
             self._exit_trade('call', now)
             self.call_trade = 0
 
-        if self.put_trade == 1 and (ll['supertrend'].values[0] == -1 or (expiry_time and expiry_time <= now)):
+        elif self.put_trade == 1 and (ll['supertrend'].values[0] == -1 and (expiry_time and expiry_time <= now)):
             logger.info("Exiting PUT trade.")
             self._exit_trade('put', now)
             self.put_trade = 0
@@ -108,9 +114,14 @@ class HourlyExecution:
             self.put_trade = 1
 
         # End of day capture
-        if now >= datetime.strptime(now.strftime("%Y-%m-%d") + ' 15:30:00', "%Y-%m-%d %H:%M:%S"):
+        eod_time = now.replace(hour=15, minute=30, second=0, microsecond=0)
+        if now >= eod_time:
             logger.info("Recording end-of-day positions.")
-            pos = PositionFetcher().get_positions()['data'][0]
+            try:
+                pos = PositionFetcher().get_positions()['data'][0]
+            except Exception as e:
+                pos = PositionFetcher().get_positions()['data']
+
             self.record_end_of_day(pos, now.strftime("%Y-%m-%d_%H-%M-%S"))
 
         self.state_mgr.update_trade_flags(self.call_trade, self.put_trade)
