@@ -112,6 +112,9 @@ class HourlyExecution:
             logger.info("Entering PUT trade.")
             self._enter_trade('put', now)
             self.put_trade = 1
+            
+        self.state_mgr.update_trade_flags(self.call_trade, self.put_trade)
+        logger.info("Updated trade flags and saved state.")
 
         # End of day capture
         eod_time = now.replace(hour=15, minute=30, second=0, microsecond=0)
@@ -124,8 +127,7 @@ class HourlyExecution:
 
             self.record_end_of_day(pos, now.strftime("%Y-%m-%d_%H-%M-%S"))
 
-        self.state_mgr.update_trade_flags(self.call_trade, self.put_trade)
-        logger.info("Updated trade flags and saved state.")
+        
 
     def _enter_trade(self, typ, now):
         logger.info(f"Placing {typ.upper()} entry orders at {now}")
