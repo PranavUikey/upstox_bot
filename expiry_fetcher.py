@@ -28,6 +28,7 @@ class FetchExpiryDates:
             contracts = data.get("data", [])
             expiry_dates = [contract["expiry"] for contract in contracts if "expiry" in contract]
             unique_expiry_dates = sorted(set(expiry_dates))
+            print
             return unique_expiry_dates
         else:
             return f"Error: {response.status_code} - {response.text}"

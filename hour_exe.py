@@ -112,7 +112,7 @@ class HourlyExecution:
             logger.info("Entering PUT trade.")
             self._enter_trade('put', now)
             self.put_trade = 1
-            
+
         self.state_mgr.update_trade_flags(self.call_trade, self.put_trade)
         logger.info("Updated trade flags and saved state.")
 

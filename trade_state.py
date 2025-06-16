@@ -39,7 +39,7 @@ class TradeState:
             logger.warning("State file not found (NoSuchKey). Creating a new one.")
             expiry_fetcher = FetchExpiryDates()
             expiry_list = expiry_fetcher.expiry_date()
-            expiry_date = expiry_list[1] if len(expiry_list) > 1 else expiry_list[0]
+            expiry_date = expiry_list[1] 
             self.save_state({
                 "call_trade": 0,
                 "put_trade": 0,
@@ -51,7 +51,7 @@ class TradeState:
                 logger.warning("State file not found (404). Creating a new one.")
                 expiry_fetcher = FetchExpiryDates()
                 expiry_list = expiry_fetcher.expiry_date()
-                expiry_date = expiry_list[1] if len(expiry_list) > 1 else expiry_list[0]
+                expiry_date = expiry_list[1]
                 self.save_state({
                     "call_trade": 0,
                     "put_trade": 0,
@@ -90,9 +90,16 @@ class TradeState:
     def update_trade_flags(self, call_trade, put_trade):
         logger.info(f"Updating trade flags: call={call_trade}, put={put_trade}")
         state = self.load_state()
+
+        expiry_fetcher = FetchExpiryDates()
+        expiry_list = expiry_fetcher.expiry_date()
+        expiry_date = expiry_list[1]
+        
         state.update({
+            
             "call_trade": call_trade,
             "put_trade": put_trade,
+            "expiry_date": expiry_date
         })
         self.save_state(state)
 
