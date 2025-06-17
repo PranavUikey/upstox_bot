@@ -7,7 +7,7 @@ from config import AWSConfig  # Assuming you have a config.py with AWSConfig cla
 
 
 class FetchOHLC:
-    def __init__(self, instrument_key="NSE_INDEX|Nifty 50", interval='15minute', ssm_param='/upstox/access_token'):
+    def __init__(self, instrument_key="NSE_INDEX|Nifty 50", interval='hours/1', ssm_param='/upstox/access_token'):
         self.instrument_key = instrument_key
         self.interval = interval
 
@@ -68,3 +68,4 @@ class FetchOHLC:
 # ohlc = FetchOHLC()
 # all_days_df = ohlc.all_days_ohlc()
 # print(all_days_df.tail(10))
+
