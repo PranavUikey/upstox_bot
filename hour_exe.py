@@ -28,7 +28,7 @@ class HourlyExecution:
     def __init__(self):
         logger.info("Initializing HourlyExecution...")
 
-        self.state_mgr = TradeState()
+        self.state_mgr = TradeState()   
         state = self.state_mgr.get_state()
         self.call_trade = state["call_trade"]
         self.put_trade = state["put_trade"]
