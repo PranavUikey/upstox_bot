@@ -76,33 +76,41 @@ class HourlyExecution:
         logger.info(f"Running trade execution at {now}")
 
         cond_call = (ll['close'].values[0] < ll['EMA_20'].values[0] and
-                     ll['supertrend'].values[0] == -1 and
-                     ll['close'].values[0] < ll['open'].values[0])
-        
+                    ll['supertrend'].values[0] == -1 and
+                    ll['close'].values[0] < ll['open'].values[0])
         cond_put = (ll['close'].values[0] > ll['EMA_20'].values[0] and
                     ll['supertrend'].values[0] == 1 and
                     ll['close'].values[0] > ll['open'].values[0])
-        
+
         tz = pytz.timezone("Asia/Kolkata")
-
         expiry_time = (
-                        tz.localize(datetime.strptime(self.expiry + ' 15:00:00', "%Y-%m-%d %H:%M:%S"))
-                        if isinstance(self.expiry, str)
-                        else None
-                    )
+            tz.localize(datetime.strptime(self.expiry + ' 15:00:00', "%Y-%m-%d %H:%M:%S"))
+            if isinstance(self.expiry, str)
+            else None
+        )
 
-        # First handle exits
-        if self.call_trade == 1 and (ll['supertrend'].values[0] == 1 and (expiry_time and expiry_time <= now)):
-            logger.info("Exiting CALL trade.")
+        # --- Expiry exit logic ---
+        if self.call_trade == 1 and expiry_time and expiry_time <= now:
+            logger.info("Exiting CALL trade due to expiry.")
             self._exit_trade('call', now)
             self.call_trade = 0
 
-        elif self.put_trade == 1 and (ll['supertrend'].values[0] == -1 and (expiry_time and expiry_time <= now)):
-            logger.info("Exiting PUT trade.")
+        if self.put_trade == 1 and expiry_time and expiry_time <= now:
+            logger.info("Exiting PUT trade due to expiry.")
             self._exit_trade('put', now)
             self.put_trade = 0
 
-        # Then check for fresh entries
+        # --- End of day capture ---
+        eod_time = now.replace(hour=15, minute=30, second=0, microsecond=0)
+        if now >= eod_time:
+            logger.info("Recording end-of-day positions.")
+            try:
+                pos = PositionFetcher().get_positions()['data'][0]
+            except Exception as e:
+                pos = PositionFetcher().get_positions()['data']
+            self.record_end_of_day(pos, now.strftime("%Y-%m-%d_%H-%M-%S"))
+
+        # --- Entry logic ---
         if cond_call and self.call_trade == 0 and self.put_trade == 0:
             logger.info("Entering CALL trade.")
             self._enter_trade('call', now)
@@ -113,19 +121,19 @@ class HourlyExecution:
             self._enter_trade('put', now)
             self.put_trade = 1
 
+        # --- Stoploss/Trailing SL logic ---
+        elif self.call_trade == 1 and ll['supertrend'].values[0] == 1:
+            logger.info("Exiting CALL trade due to stoploss/trailing SL.")
+            self._exit_trade('call', now)
+            self.call_trade = 0
+
+        elif self.put_trade == 1 and ll['supertrend'].values[0] == -1:
+            logger.info("Exiting PUT trade due to stoploss/trailing SL.")
+            self._exit_trade('put', now)
+            self.put_trade = 0
+
         self.state_mgr.update_trade_flags(self.call_trade, self.put_trade)
         logger.info("Updated trade flags and saved state.")
-
-        # End of day capture
-        eod_time = now.replace(hour=15, minute=30, second=0, microsecond=0)
-        if now >= eod_time:
-            logger.info("Recording end-of-day positions.")
-            try:
-                pos = PositionFetcher().get_positions()['data'][0]
-            except Exception as e:
-                pos = PositionFetcher().get_positions()['data']
-
-            self.record_end_of_day(pos, now.strftime("%Y-%m-%d_%H-%M-%S"))
 
         
 

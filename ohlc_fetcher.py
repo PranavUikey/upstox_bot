@@ -7,7 +7,7 @@ from config import AWSConfig  # Assuming you have a config.py with AWSConfig cla
 
 
 class FetchOHLC:
-    def __init__(self, instrument_key="NSE_INDEX|Nifty 50", interval='hours/1', ssm_param='/upstox/access_token'):
+    def __init__(self, instrument_key="NSE_INDEX|Nifty 50", interval='minutes/15', ssm_param='/upstox/access_token'):
         self.instrument_key = instrument_key
         self.interval = interval
 
