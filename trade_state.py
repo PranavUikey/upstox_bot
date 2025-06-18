@@ -97,7 +97,7 @@ class TradeState:
         
         state.update({
             
-            "call_trade": call_trade,
+            "call_trade": 0,
             "put_trade": put_trade,
             "expiry_date": expiry_date
         })

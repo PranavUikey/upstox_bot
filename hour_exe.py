@@ -141,43 +141,71 @@ class HourlyExecution:
         logger.info(f"Placing {typ.upper()} entry orders at {now}")
         opt = self.call_option if typ == 'call' else self.put_option
 
+        buy_token = opt[0]['instrument_key'].values[0]
+        sell_token = opt[1]['instrument_key'].values[0]
+
         self.order_conf = Order(75, 'BUY')
-        self.order_conf.order_place(opt[0]['instrument_key'].values[0])
-        logger.info(f"BUY order placed for: {opt[0]['instrument_key'].values[0]}")
+        self.order_conf.order_place(buy_token)
+        logger.info(f"BUY order placed for: {buy_token}")
         self.record_trade_execution(np.append(opt[0].values, [now, 'BUY']))
 
         self.order_conf = Order(75, 'SELL')
-        self.order_conf.order_place(opt[1]['instrument_key'].values[0])
-        logger.info(f"SELL order placed for: {opt[1]['instrument_key'].values[0]}")
+        self.order_conf.order_place(sell_token)
+        logger.info(f"SELL order placed for: {sell_token}")
         self.record_trade_execution(np.append(opt[1].values, [now, 'SELL']))
+
+        # Save the tokens in state for exit
+        state = self.state_mgr.get_state()
+        if typ == 'call':
+            state['call_entry_tokens'] = [buy_token, sell_token]
+        else:
+            state['put_entry_tokens'] = [buy_token, sell_token]
+        self.state_mgr.save_state(state)
 
         subject = f"{typ.upper()} Trade Entry Executed"
         body = (
             f"A {typ.upper()} trade has been entered at {now}.\n"
-            f"BUY: {opt[0]['instrument_key'].values[0]}\n"
-            f"SELL: {opt[1]['instrument_key'].values[0]}"
+            f"BUY: {buy_token}\n"
+            f"SELL: {sell_token}"
         )
         self.state_mgr.send_trade_email(subject, body, "snehadeep.sb@gmail.com", "pranavuiih@gmail.com")
 
     def _exit_trade(self, typ, now):
         logger.info(f"Placing {typ.upper()} exit orders at {now}")
-        opt = self.call_option if typ == 'call' else self.put_option
 
+        state = self.state_mgr.get_state()
+        if typ == 'call':
+            tokens = state.get('call_entry_tokens', [])
+        else:
+            tokens = state.get('put_entry_tokens', [])
+
+        if len(tokens) != 2:
+            logger.error(f"No entry tokens found for {typ.upper()} trade exit!")
+            return
+
+        # Exit in reverse: sell what was bought, buy what was sold
         self.order_conf = Order(75, 'SELL')
-        self.order_conf.order_place(opt[0]['instrument_key'].values[0])
-        logger.info(f"SELL order placed for: {opt[0]['instrument_key'].values[0]}")
-        self.record_trade_execution(np.append(opt[0].values, [now, 'SELL']))
+        self.order_conf.order_place(tokens[0])
+        logger.info(f"SELL order placed for: {tokens[0]}")
+        self.record_trade_execution([tokens[0], now, 'SELL'])
 
         self.order_conf = Order(75, 'BUY')
-        self.order_conf.order_place(opt[1]['instrument_key'].values[0])
-        logger.info(f"BUY order placed for: {opt[1]['instrument_key'].values[0]}")
-        self.record_trade_execution(np.append(opt[1].values, [now, 'BUY']))
+        self.order_conf.order_place(tokens[1])
+        logger.info(f"BUY order placed for: {tokens[1]}")
+        self.record_trade_execution([tokens[1], now, 'BUY'])
+
+        # Remove tokens from state after exit
+        if typ == 'call':
+            state['call_entry_tokens'] = []
+        else:
+            state['put_entry_tokens'] = []
+        self.state_mgr.save_state(state)
 
         subject = f"{typ.upper()} Trade Exit Executed"
         body = (
             f"A {typ.upper()} trade has been exited at {now}.\n"
-            f"SELL: {opt[0]['instrument_key'].values[0]}\n"
-            f"BUY: {opt[1]['instrument_key'].values[0]}"
+            f"SELL: {tokens[0]}\n"
+            f"BUY: {tokens[1]}"
         )
         self.state_mgr.send_trade_email(subject, body, "snehadeep.sb@gmail.com", "pranavuiih@gmail.com")
 
