@@ -143,6 +143,8 @@ class HourlyExecution:
 
         buy_token = opt[0]['instrument_key'].values[0]
         sell_token = opt[1]['instrument_key'].values[0]
+        logger.info(f"Preparing to BUY: {buy_token}")
+        logger.info(f"Preparing to SELL: {sell_token}")
 
         self.order_conf = Order(75, 'BUY')
         self.order_conf.order_place(buy_token)
