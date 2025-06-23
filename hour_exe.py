@@ -112,6 +112,8 @@ class HourlyExecution:
 
 
         # --- Stoploss/Trailing SL logic ---
+        logger.info(f"CALL exit check: self.put_trade={self.call_trade}, supertrend={ll['supertrend'].values[0]}")
+        logger.info(f"PUT exit check: self.put_trade={self.put_trade}, supertrend={ll['supertrend'].values[0]}")
         if self.call_trade == 1 and ll['supertrend'].values[0] == 1:
             logger.info("Exiting CALL trade due to stoploss/trailing SL.")
             self._exit_trade('call', now)
