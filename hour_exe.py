@@ -110,8 +110,20 @@ class HourlyExecution:
                 pos = PositionFetcher().get_positions()['data']
             self.record_end_of_day(pos, now.strftime("%Y-%m-%d_%H-%M-%S"))
 
+
+        # --- Stoploss/Trailing SL logic ---
+        if self.call_trade == 1 and ll['supertrend'].values[0] == 1:
+            logger.info("Exiting CALL trade due to stoploss/trailing SL.")
+            self._exit_trade('call', now)
+            self.call_trade = 0
+
+        elif self.put_trade == 1 and ll['supertrend'].values[0] == -1:
+            logger.info("Exiting PUT trade due to stoploss/trailing SL.")
+            self._exit_trade('put', now)
+            self.put_trade = 0
+
         # --- Entry logic ---
-        if cond_call and self.call_trade == 0 and self.put_trade == 0:
+        elif cond_call and self.call_trade == 0 and self.put_trade == 0:
             logger.info("Entering CALL trade.")
             self._enter_trade('call', now)
             self.call_trade = 1
@@ -121,16 +133,6 @@ class HourlyExecution:
             self._enter_trade('put', now)
             self.put_trade = 1
 
-        # --- Stoploss/Trailing SL logic ---
-        elif self.call_trade == 1 and ll['supertrend'].values[0] == 1:
-            logger.info("Exiting CALL trade due to stoploss/trailing SL.")
-            self._exit_trade('call', now)
-            self.call_trade = 0
-
-        elif self.put_trade == 1 and ll['supertrend'].values[0] == -1:
-            logger.info("Exiting PUT trade due to stoploss/trailing SL.")
-            self._exit_trade('put', now)
-            self.put_trade = 0
 
         self.state_mgr.update_trade_flags(self.call_trade, self.put_trade)
         logger.info("Updated trade flags and saved state.")
