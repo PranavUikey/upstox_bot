@@ -65,7 +65,7 @@ class FetchOHLC:
 
 
 # Run the code
-# ohlc = FetchOHLC()
-# all_days_df = ohlc.all_days_ohlc()
-# print(all_days_df.tail(30))
+ohlc = FetchOHLC()
+all_days_df = ohlc.all_days_ohlc()
+print(all_days_df.tail(30))
 
