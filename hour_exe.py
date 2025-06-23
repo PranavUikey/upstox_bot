@@ -132,7 +132,7 @@ class HourlyExecution:
             self._exit_trade('put', now)
             self.put_trade = 0
 
-        self.state_mgr.update_trade_flags(self.call_trade, self.put_trade)
+        self.state_mgr.update_trade_flags(0, self.put_trade)
         logger.info("Updated trade flags and saved state.")
 
         
