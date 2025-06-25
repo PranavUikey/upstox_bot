@@ -181,8 +181,10 @@ class HourlyExecution:
 
         state = self.state_mgr.get_state()
         if typ == 'call':
+            opt = self.call_option
             tokens = state.get('call_entry_tokens', [])
-        else:
+        elif typ == 'put':
+            opt = self.put_option
             tokens = state.get('put_entry_tokens', [])
 
         if len(tokens) != 2:
@@ -193,12 +195,12 @@ class HourlyExecution:
         self.order_conf = Order(75, 'SELL')
         self.order_conf.order_place(tokens[0])
         logger.info(f"SELL order placed for: {tokens[0]}")
-        # self.record_trade_execution([tokens[0], now, 'SELL'])
+        self.record_trade_execution(np.append(opt[0].values, [now, 'SELL']))
 
         self.order_conf = Order(75, 'BUY')
         self.order_conf.order_place(tokens[1])
         logger.info(f"BUY order placed for: {tokens[1]}")
-        # self.record_trade_execution([tokens[1], now, 'BUY'])
+        self.record_trade_execution(np.append(opt[1].values, [now, 'BUY']))
 
         # Remove tokens from state after exit
         if typ == 'call':
