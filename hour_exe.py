@@ -187,12 +187,12 @@ class HourlyExecution:
         self.order_conf = Order(75, 'SELL')
         self.order_conf.order_place(tokens[0])
         logger.info(f"SELL order placed for: {tokens[0]}")
-        self.record_trade_execution([tokens[0], now, 'SELL'])
+        # self.record_trade_execution([tokens[0], now, 'SELL'])
 
         self.order_conf = Order(75, 'BUY')
         self.order_conf.order_place(tokens[1])
         logger.info(f"BUY order placed for: {tokens[1]}")
-        self.record_trade_execution([tokens[1], now, 'BUY'])
+        # self.record_trade_execution([tokens[1], now, 'BUY'])
 
         # Remove tokens from state after exit
         if typ == 'call':
