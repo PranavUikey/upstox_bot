@@ -91,15 +91,13 @@ class TradeState:
         logger.info(f"Updating trade flags: call={call_trade}, put={put_trade}")
         state = self.load_state()
 
-        expiry_fetcher = FetchExpiryDates()
-        expiry_list = expiry_fetcher.expiry_date()
-        expiry_date = expiry_list[1]
+    
         
         state.update({
             
             "call_trade": call_trade,
             "put_trade": put_trade,
-            "expiry_date": expiry_date
+            "expiry_date": '2025,-07-03'
         })
         self.save_state(state)
 

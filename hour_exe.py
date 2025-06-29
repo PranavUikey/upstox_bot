@@ -166,6 +166,7 @@ class HourlyExecution:
             state['call_entry_tokens'] = [buy_token, sell_token]
         else:
             state['put_entry_tokens'] = [buy_token, sell_token]
+        state['expiry_date'] = self.expiry
         self.state_mgr.save_state(state)
 
         subject = f"{typ.upper()} Trade Entry Executed"
