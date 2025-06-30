@@ -97,6 +97,7 @@ class TradeState:
             
             "call_trade": call_trade,
             "put_trade": put_trade,
+            "expiry_date": '2025-07-03'
         })
         self.save_state(state)
 
