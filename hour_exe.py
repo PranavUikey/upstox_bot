@@ -125,7 +125,7 @@ class HourlyExecution:
             self.put_trade = 0
 
         # --- Entry logic ---
-        elif cond_call and self.call_trade == 0 and self.put_trade == 0:
+        if cond_call and self.call_trade == 0 and self.put_trade == 0:
             logger.info("Entering CALL trade.")
             self._enter_trade('call', now)
             self.call_trade = 1
