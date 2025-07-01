@@ -125,6 +125,16 @@ class HourlyExecution:
             self.put_trade = 0
 
         # --- Entry logic ---
+        print(cond_call)
+        print(ll['close'].values[0] < ll['EMA_20'].values[0])
+        print(ll['supertrend'].values[0] == -1)
+        print(ll['close'].values[0] < ll['open'].values[0])
+        print(cond_put)
+        print(ll['close'].values[0] > ll['EMA_20'].values[0])
+        print(ll['supertrend'].values[0] == 1)
+        print(ll['close'].values[0] > ll['open'].values[0])
+        print(self.call_trade)
+        print(self.put_trade)
         if cond_call and self.call_trade == 0 and self.put_trade == 0:
             logger.info("Entering CALL trade.")
             self._enter_trade('call', now)

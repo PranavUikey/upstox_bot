@@ -96,7 +96,7 @@ class TradeState:
         state.update({
             
             "call_trade": call_trade,
-            "put_trade": put_trade,
+            "put_trade": 0,
         })
         self.save_state(state)
 
