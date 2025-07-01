@@ -90,13 +90,11 @@ class TradeState:
     def update_trade_flags(self, call_trade, put_trade):
         logger.info(f"Updating trade flags: call={call_trade}, put={put_trade}")
         state = self.load_state()
-
     
-        
         state.update({
             
             "call_trade": call_trade,
-            "put_trade": 0,
+            "put_trade": put_trade,
         })
         self.save_state(state)
 
