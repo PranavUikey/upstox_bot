@@ -84,10 +84,13 @@ class HourlyExecution:
 
         tz = pytz.timezone("Asia/Kolkata")
         expiry_time = (
-            tz.localize(datetime.strptime(self.expiry + ' 15:00:00', "%Y-%m-%d %H:%M:%S"))
+            tz.localize(datetime.strptime(self.expiry + ' 14:15:00', "%Y-%m-%d %H:%M:%S"))
             if isinstance(self.expiry, str)
             else None
         )
+        print(expiry_time)
+        print(now)
+        print(expiry_time<=now)
 
         # --- Expiry exit logic ---
         if self.call_trade == 1 and expiry_time and expiry_time <= now:
