@@ -223,7 +223,11 @@ class HourlyExecution:
             state['call_entry_tokens'] = []
         else:
             state['put_entry_tokens'] = []
+        state['expiry_date'] = ''
         self.state_mgr.save_state(state)
+        logger.info(f"Trade exit completed for {typ.upper()} trade.")
+        # Send exit email
+        
 
         subject = f"{typ.upper()} Trade Exit Executed"
         body = (
