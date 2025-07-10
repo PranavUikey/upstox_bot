@@ -83,9 +83,11 @@ class HourlyExecution:
                     ll['close'].values[0] > ll['open'].values[0])
 
         tz = pytz.timezone("Asia/Kolkata")
+        state = self.state_mgr.get_state()
+        expiry = state.get('expiry_date', self.expiry)
         expiry_time = (
-            tz.localize(datetime.strptime(self.expiry + ' 14:15:00', "%Y-%m-%d %H:%M:%S"))
-            if isinstance(self.expiry, str)
+            tz.localize(datetime.strptime(expiry + ' 14:15:00', "%Y-%m-%d %H:%M:%S"))
+            if isinstance(expiry, str)
             else None
         )
         print(expiry_time)
