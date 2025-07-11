@@ -85,6 +85,12 @@ class HourlyExecution:
         tz = pytz.timezone("Asia/Kolkata")
         state = self.state_mgr.get_state()
         expiry = state.get('expiry_date', self.expiry)
+        if expiry == '':
+            logger.error("Expiry date is not set. Cannot proceed with trade execution.")
+            expiry = self.expiry
+
+        
+
         expiry_time = (
             tz.localize(datetime.strptime(expiry + ' 14:15:00', "%Y-%m-%d %H:%M:%S"))
             if isinstance(expiry, str)
