@@ -71,7 +71,8 @@ class HourlyExecution:
 
     def run(self):
         now = datetime.now(pytz.timezone('Asia/Kolkata'))
-        ll = self.last_line
+        # ll = self.last_line
+        ll = self.ohlc_data.all_days_ohlc().tail(1)
 
         logger.info(f"Running trade execution at {now}")
 
