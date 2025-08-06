@@ -34,7 +34,7 @@ class HourlyExecution:
         self.put_trade = state["put_trade"]
         logger.info(f"Current trade state - Call: {self.call_trade}, Put: {self.put_trade}")
 
-        ohlc_data = FetchOHLC()
+        self.ohlc_data = FetchOHLC()
         self.last_line = ohlc_data.all_days_ohlc().tail(1)
         logger.info(f"Last OHLC Data: {self.last_line}")
 
@@ -72,8 +72,7 @@ class HourlyExecution:
     def run(self):
         now = datetime.now(pytz.timezone('Asia/Kolkata'))
         # ll = self.last_line
-        ll = self.ohlc_data.all_days_ohlc().tail(1)
-
+        ll =  self.ohlc_data.all_days_ohlc().tail(1)
         logger.info(f"Running trade execution at {now}")
 
         cond_call = (ll['close'].values[0] < ll['EMA_20'].values[0] and
