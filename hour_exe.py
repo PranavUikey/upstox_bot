@@ -35,7 +35,7 @@ class HourlyExecution:
         logger.info(f"Current trade state - Call: {self.call_trade}, Put: {self.put_trade}")
 
         self.ohlc_data = FetchOHLC()
-        self.last_line = ohlc_data.all_days_ohlc().tail(1)
+        self.last_line = self.ohlc_data.all_days_ohlc().tail(1)
         logger.info(f"Last OHLC Data: {self.last_line}")
 
         expiryDate = FetchExpiryDates()
